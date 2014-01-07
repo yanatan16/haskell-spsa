@@ -1,6 +1,6 @@
 module Test.SPSA where
 
-import Test.Framework (defaultMain, testGroup)
+import Test.Framework (defaultMainWithArgs, testGroup)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
 
@@ -92,13 +92,13 @@ tests = [
     testProperty "length of perturbation distribution" props_bernoulliLength
     ,testProperty "elements are bernoulli in perturbation vector" props_bernoulliElements
     ]
-  ,testGroup "simpleSPSA" [
+  ,testGroup "SPSA" [
     testCase "absSum SPSA" case_absSumSPSA
     ,testCase "rosenbrock SPSA" case_rosenbrockSPSA
     ]
   ]
 
 -- convenient whilst in ghci
-runTests = defaultMain tests
-
-runGroup i = defaultMain [tests !! i]
+runAllTests = defaultMainWithArgs tests []
+runTests p = defaultMainWithArgs tests ["--select-tests", p]
+runGroup i = defaultMainWithArgs [tests !! i] []

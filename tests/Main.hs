@@ -1,5 +1,6 @@
 module Main where
 
-import Test.SPSA (runTests)
+import Test.SPSA (tests)
+import Test.Framework (defaultMain)
 
-main = runTests
+main = defaultMain tests
