@@ -2,7 +2,7 @@
 
 [Simultaneous Perturbation Stochastic Approximation](http://jhuapl.edu/SPSA) is a global optimizer for continuous loss functions of any dimension. It has a strong theoretical foundation with very few knobs that must be tuned. While it doesn't get the press of Genetic Algorithms or other Evolutionary Computing, it is on the same level with a better foundation.
 
-_Status_: Not stable
+_Status_: stablish
 
 ## Documentation
 

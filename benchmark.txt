@@ -1,0 +1,8 @@
+benchmarking Rosenbrock/n=10000
+collecting 100 samples, 1 iterations each, in estimated 15.47420 s
+mean: 156.3310 ms, lb 152.6422 ms, ub 160.8022 ms, ci 0.950
+std dev: 20.76709 ms, lb 17.65807 ms, ub 24.76964 ms, ci 0.950
+found 4 outliers among 100 samples (4.0%)
+  4 (4.0%) high mild
+variance introduced by outliers: 87.314%
+variance is severely inflated by outliers

@@ -1,29 +1,24 @@
 module Test.Types (
   SmallIndex(..),
-  SmallDouble(..), toDouble,
+  SmallDouble(..),
   Exponent(..),
-  UDouble(..),
-  UInt(..)
+  NonNegativeDouble(..)
 ) where
 
-import Math.Optimization.SPSA (Exponent(..), UDouble(..), UInt(..))
 import System.Random (Random)
 
 import Test.QuickCheck (Arbitrary(..),
-        arbitraryBoundedRandom, arbitraryBoundedIntegral, arbitrarySizedBoundedIntegral,
+        arbitraryBoundedRandom, arbitraryBoundedIntegral,
         shrinkIntegral, shrinkRealFrac,)
 
-instance Arbitrary Exponent where
+newtype Exponent d = Exponent d deriving (Read,Show,Eq,Ord,Num,Real,Enum,Floating,Fractional,RealFrac,RealFloat,Random)
+instance (Num d, RealFrac d) => Bounded (Exponent d) where
+  minBound = 0.000000001
+  maxBound = 1
+
+instance (Num d, RealFrac d, Random d) => Arbitrary (Exponent d) where
   arbitrary = arbitraryBoundedRandom
   shrink = shrinkRealFrac
-
-instance Arbitrary UDouble where
-  arbitrary = arbitraryBoundedRandom
-  shrink = shrinkRealFrac
-
-instance Arbitrary UInt where
-  arbitrary = arbitrarySizedBoundedIntegral
-  shrink = shrinkIntegral
 
 newtype SmallIndex = SmallIndex Int deriving (Read,Show,Eq,Ord,Num,Real,Enum,Integral)
 
@@ -45,4 +40,24 @@ instance Arbitrary SmallDouble where
   arbitrary = arbitraryBoundedRandom
   shrink = shrinkRealFrac
 
-toDouble (SmallDouble d) = d
+newtype NonNegativeDouble = NonNegativeDouble Double deriving (Read,Show,Eq,Ord,Num,Real,Enum,RealFrac,Floating,RealFloat,Fractional,Random)
+
+instance Bounded NonNegativeDouble where
+  minBound = 0
+  maxBound = maxNonInfiniteFloat 0
+
+instance Arbitrary NonNegativeDouble where
+  arbitrary = arbitraryBoundedRandom
+  shrink = shrinkRealFrac
+
+-----------------
+-- Helpers
+-----------------
+
+maxNonInfiniteFloat :: RealFloat a => a -> a
+maxNonInfiniteFloat a = encodeFloat m n where
+    b = floatRadix a
+    e = floatDigits a
+    (_, e') = floatRange a
+    m = b ^ e - 1
+    n = e' - e

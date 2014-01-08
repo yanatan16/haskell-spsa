@@ -4,7 +4,7 @@
 name:                spsa
 version:             0.1.0.0
 synopsis:            Simultaneous Perturbation Stochastic Approximation Optimization Algorithm
--- description:
+description:         The Simultaneous Perturbation Stochastic Approximation (SPSA) Optimization Algorithm implemented in Haskell.
 homepage:            https://github.com/yanatan16/haskell-spsa
 license:             MIT
 license-file:        LICENSE
@@ -27,8 +27,9 @@ test-suite tests
   main-is:            Main.hs
   hs-source-dirs:     tests
   other-modules:      Test.Test, Test.Types
-  build-depends:      spsa,
-                      base, random, hmatrix >= 0.15,
+  build-depends:      base >=4 && < 5,
+                      spsa,
+                      random, hmatrix >= 0.15,
                       test-framework >= 0.2.0,
                       test-framework-quickcheck2 >= 0.2.0, QuickCheck >= 2,
                       test-framework-hunit >= 0.2.0, HUnit >= 1.2 && < 2
@@ -40,7 +41,8 @@ benchmark benchmarks
   hs-source-dirs:   benchmarks
   main-is:          Benchmarks.hs
   ghc-options:      -O2 -rtsopts
-  build-depends:    base, spsa, hmatrix >= 0.15,
+  build-depends:    base >=4 && < 5,
+                    spsa, hmatrix >= 0.15,
                     criterion >= 0.8
 
 library
@@ -51,7 +53,8 @@ library
                     Math.Optimization.SPSA.Implementation
   hs-source-dirs:   src
 
-  build-depends:    base, random, hmatrix >= 0.15
+  build-depends:    base >=4 && < 5,
+                    random, hmatrix >= 0.15
   default-extensions:       GeneralizedNewtypeDeriving
 
   if flag(developer)
