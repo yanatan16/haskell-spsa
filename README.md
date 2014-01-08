@@ -39,10 +39,10 @@ The `cabal-dev` command is just a sandboxing wrapper around the
 CPUs, so even the initial build shouldn't take more than a few
 minutes.
 
-    cabal-dev configure \
-        --enable-tests \
-        --enable-benchmarks
-    cabal-dev build
+```
+cabal-dev configure --enable-tests --enable-benchmarks
+cabal-dev build
+```
 
 _Note_: For the development mode use `--flags=developer`. Development mode allows you to run tests from ghci easily to allow some good ole TDD.
 
@@ -51,13 +51,11 @@ _Note_: For the development mode use `--flags=developer`. Development mode allow
 Once you've built the code, you can run the entire test suite in a few
 seconds.
 
-    cabal-dev test +RTS -N
+```
+dist/build/tests/tests +RTS -N
+```
 
-(The `+RTS -N` above tells GHC's runtime system to use all available
-cores.)
-
-If you want to explore, the `tests` program (`dist/build/tests/tests`) accepts a `--help`
-option. Try it out.
+We use the direct executable rather than `cabal-dev tests` because it doesn't pass through options very well. The `+RTS -N` above tells GHC's runtime system to use all available cores. If you want to explore, the `tests` program (`dist/build/tests/tests`) accepts a `--help` option. Try it out.
 
 
 #### Tests From GHCI
@@ -84,7 +82,13 @@ Or you can run a single test
 
 ### Running benchmarks
 
-TODO
+You can run benchmarks similar to tests.
+
+```
+dist/build/benchmarks/benchmarks
+```
+
+Just like with tests, there's a `--help` option to explore.
 
 ## Using SPSA
 

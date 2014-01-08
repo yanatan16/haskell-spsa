@@ -43,15 +43,17 @@ props_standardCkDecreasing :: UDouble -> Exponent -> SmallIndex -> Bool
 props_standardCkDecreasing c gamma (SmallIndex n) =
   monotonicallyDecreasing (take n (standardCk c gamma))
 
-props_bernoulliLength :: SmallIndex -> SmallIndex -> Property
-props_bernoulliLength (SmallIndex n) (SmallIndex m) =
+props_bernoulliLength :: SmallIndex -> Property
+props_bernoulliLength (SmallIndex n) =
     monadicIO test
   where
-    test = do pd <- run $ bernoulli (UInt n); assert $ length (pd !! m) == n
+    test = do pd <- run $ bernoulli (UInt n)
+              assert $ all (\v -> length v == n) (take 10 pd)
 
-props_bernoulliElements :: SmallIndex -> SmallIndex -> Property
-props_bernoulliElements (SmallIndex n) (SmallIndex m) = monadicIO test
-  where test = do pd <- run $ bernoulli (UInt n); assert $ all (\e -> e == -1 || e == 1) (pd !! m)
+props_bernoulliElements :: SmallIndex -> Property
+props_bernoulliElements (SmallIndex n) = monadicIO test
+  where test = do pd <- run $ bernoulli (UInt n)
+                  assert $ all (\v -> all (\e -> e == -1 || e == 1) v) (take 10 pd)
 
 props_semiautomaticTuningAk :: UDouble -> SmallIndex -> Bool
 props_semiautomaticTuningAk a (SmallIndex n) = all (\(a1,a2) -> a1 == a2) (zip ak (take n tak))
@@ -63,6 +65,9 @@ props_semiautomaticTuningCk c (SmallIndex n) = all (\(a1,a2) -> a1 == a2) (zip c
   where (_,tck) = semiautomaticTuning 1 c
         ck = standardCk c 0.101
 
+props_lossFunctionPositive :: ([Double] -> Double) -> [Double] -> Bool
+props_lossFunctionPositive loss = (>= 0.0) . loss
+
 case_absSumSPSA = do
   (ak,ck) <- return $ semiautomaticTuning 1 0.1
   spsa <- mkUnconstrainedSPSA absSum ak ck (UInt 5)
@@ -70,10 +75,10 @@ case_absSumSPSA = do
   assertBool ("SPSA Absolute Sum failed (" ++ (show $ absSum output) ++ ")") (absSum output < 0.001)
 
 case_rosenbrockSPSA = do
-  (ak,ck) <- return $ semiautomaticTuning 0.002 0.05
+  (ak,ck) <- return $ semiautomaticTuning 0.0001 0.05
   spsa <- mkUnconstrainedSPSA rosenbrock ak ck (UInt 10)
-  output <- return $ optimize spsa (UInt 10000) [0.99,1,0.99,1,0.99,1,0.99,1,0.99,1]
-  assertBool ("SPSA Rosenbrock failed (" ++ (show $ rosenbrock output) ++ ")") (rosenbrock output < 0.001)
+  output <- return $ optimize spsa (UInt 10000) [0.90,1.1,0.90,1.1,0.90,1.1,0.90,1.1,0.90,1.1]
+  assertBool ("SPSA Rosenbrock failed (" ++ (show $ rosenbrock output) ++ ")") (rosenbrock output < 0.01)
 
 tests = [
   testGroup "standardAk" [
@@ -91,6 +96,10 @@ tests = [
   ,testGroup "bernoulliPerturbationDistribution" [
     testProperty "length of perturbation distribution" props_bernoulliLength
     ,testProperty "elements are bernoulli in perturbation vector" props_bernoulliElements
+    ]
+  ,testGroup "lossFunctions" [
+    testProperty "absSum" (props_lossFunctionPositive absSum)
+    ,testProperty "rosenbrock" (props_lossFunctionPositive rosenbrock)
     ]
   ,testGroup "SPSA" [
     testCase "absSum SPSA" case_absSumSPSA

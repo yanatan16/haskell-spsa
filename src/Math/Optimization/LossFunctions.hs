@@ -6,11 +6,11 @@ module Math.Optimization.LossFunctions (
 absSum :: Num n => [n] -> n
 absSum = sum . map abs
 
-rosenbrock :: Floating n => [n] -> n
+rosenbrock :: RealFloat n => [n] -> n
 rosenbrock v = sum $ map inner $ zip [0..] v
   where
-    inner (i,x) = if odd i
+    inner (i,x) = if (i + 1 == length v) || (odd i)
       then
         0
       else
-        x + 100 * ((v !! i) ^ 2) - (v !! (i+1)) ^ 2 + ((v !! i) - 1) ^ 2
+        100 * ((x ^ 2) - (v !! (i+1))) ^ 2 + (x - 1) ^ 2
