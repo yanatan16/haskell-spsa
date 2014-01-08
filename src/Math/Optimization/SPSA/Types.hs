@@ -2,18 +2,23 @@ module Math.Optimization.SPSA.Types (
   Exponent(..),
   UDouble(..),
   UInt(..),
-  SPSA(..)
+  SPSA(..),
+  LossFn, ConstraintFn
 ) where
 
+import Numeric.LinearAlgebra (Vector(..))
 import System.Random (Random)
+
+type LossFn = Vector Double -> Double
+type ConstraintFn = Vector Double -> Vector Double
 
 -- An instance of the SPSA optimization algorithm.
 -- Initialize with all the parameters as object instantiation.
 data SPSA = SPSA {
-  loss :: [Double] -> Double,
-  constraint :: [Double] -> [Double],
+  loss :: LossFn,
+  constraint :: ConstraintFn,
   ak, ck :: [Double],
-  delta :: [[Double]] -- a stream of random perturbation vectors
+  delta :: [Vector Double] -- a stream of random perturbation vectors
 }
 
 

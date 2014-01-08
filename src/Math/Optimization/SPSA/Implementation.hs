@@ -12,18 +12,19 @@ module Math.Optimization.SPSA.Implementation (
   mkUnconstrainedSPSA
 ) where
 
-import System.Random (getStdGen, randomRs, Random(..))
+import System.Random (randomIO,getStdGen,randomRs)
 import Data.Word (Word8, Word32)
 import Data.List (genericSplitAt)
+import Numeric.LinearAlgebra (Vector(..),randomVector,RandDist(Uniform),cmap,scale,scaleRecip,fromList)
 
-import Math.Optimization.SPSA.Types (SPSA(..),UDouble(..),Exponent(..),UInt(..))
+import Math.Optimization.SPSA.Types (LossFn,ConstraintFn,SPSA(..),UDouble(..),Exponent(..),UInt(..))
 
 -----------------
 -- Types
 -----------------
 
 
-mkUnconstrainedSPSA :: ([Double]->Double) -> [Double] -> [Double] -> UInt -> IO SPSA
+mkUnconstrainedSPSA :: LossFn -> [Double] -> [Double] -> UInt -> IO SPSA
 mkUnconstrainedSPSA loss ak ck n = do
   pd <- bernoulli n
   return SPSA{loss=loss, constraint=id, ak=ak, ck=ck, delta=pd}
@@ -32,16 +33,18 @@ mkUnconstrainedSPSA loss ak ck n = do
 -- Main Functions
 -----------------
 
-optimize :: SPSA -> UInt -> [Double] -> [Double]
+optimize :: SPSA -> UInt -> Vector Double -> Vector Double
 optimize spsa (UInt rounds) t0 = foldl optimize t0 (take rounds $ zip3 (ak spsa) (ck spsa) (delta spsa))
   where
     constrainF = constraint spsa
     lossF = loss spsa
-    optimize t (a,c,d) = constrainF $ [tk - a * gk | (tk,gk) <- zip t g]
+    optimize t (a,c,d) = constrainF (t - (scale a g))
       where
-        ya = lossF [tk + c * dk | (tk,dk) <- zip t d]
-        yb = lossF [tk - c * dk | (tk,dk) <- zip t d]
-        g = [(ya - yb) / (2 * c * dk) | dk <- d]
+        cd = scale c d
+        ya = lossF (t + cd)
+        yb = lossF (t - cd)
+        g = scaleRecip ((ya - yb) / 2) cd
+        types = (a,c,d) :: (Double,Double,Vector Double)
 
 
 -----------------
@@ -61,12 +64,18 @@ semiautomaticTuning a c = (standardAk a 0 0.602, standardCk c 0.101)
 -- Distributions
 -----------------
 
-bernoulli :: UInt -> IO [[Double]]
+bernoulli :: UInt -> IO [Vector Double]
 bernoulli n = do
   stdgen <- getStdGen
   rands <- return (randomRs (0,1) stdgen :: [Word8])
   berns <- return $ map (\i -> 2 * ((fromIntegral i) - 0.5)) rands
-  return $ accumEvery n berns
+  return $ map fromList $ accumEvery n berns
+--bernoulli (UInt n) = mapM (\_ -> genBernoulliVec) [1..]
+--  where
+--    genBernoulliVec = do
+--      seed <- randomIO
+--      vec <- return $ randomVector seed Uniform n
+--      return $ cmap (\x -> if x < 0.5 then -1 else 1) vec
 
 -----------------
 -- Helpers

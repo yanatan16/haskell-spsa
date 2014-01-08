@@ -26,9 +26,9 @@ test-suite tests
   type: exitcode-stdio-1.0
   main-is:            Main.hs
   hs-source-dirs:     tests
-  other-modules:      Test.SPSA, Test.Types
+  other-modules:      Test.Test, Test.Types
   build-depends:      spsa,
-                      base, random,
+                      base, random, hmatrix >= 0.15,
                       test-framework >= 0.2.0,
                       test-framework-quickcheck2 >= 0.2.0, QuickCheck >= 2,
                       test-framework-hunit >= 0.2.0, HUnit >= 1.2 && < 2
@@ -40,7 +40,7 @@ benchmark benchmarks
   hs-source-dirs:   benchmarks
   main-is:          Benchmarks.hs
   ghc-options:      -O2 -rtsopts
-  build-depends:    base, spsa,
+  build-depends:    base, spsa, hmatrix >= 0.15,
                     criterion >= 0.8
 
 library
@@ -51,12 +51,12 @@ library
                     Math.Optimization.SPSA.Implementation
   hs-source-dirs:   src
 
-  build-depends:    base, random
+  build-depends:    base, random, hmatrix >= 0.15
   default-extensions:       GeneralizedNewtypeDeriving
 
   if flag(developer)
     hs-source-dirs: tests
-    other-modules:  Test.SPSA, Test.Types
+    other-modules:  Test.Test, Test.Types
     build-depends:  test-framework >= 0.2.0,
                     test-framework-quickcheck2 >= 0.2.0, QuickCheck >= 2,
                     test-framework-hunit >= 0.2.0, HUnit >= 1.2 && < 2
