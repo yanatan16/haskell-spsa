@@ -16,7 +16,7 @@ square :: Vector Double -> Vector Double
 square x = mul x x
 
 rosenbrock :: LossFn
-rosenbrock v = sumVector $ 100 * (square (square x) - y) + (square (x - 1))
+rosenbrock v = sumVector $ 100 * (square $ (square x) - y) + (square (x - 1))
   where
     sz = (dim v) `quot` 2
     x = subVector 0 sz v
