@@ -2,7 +2,7 @@
 -- see http://haskell.org/cabal/users-guide/
 
 name:                spsa
-version:             0.1.1.0
+version:             0.1.2.0
 synopsis:            Simultaneous Perturbation Stochastic Approximation Optimization Algorithm
 description:         The Simultaneous Perturbation Stochastic Approximation (SPSA) Optimization Algorithm implemented in Haskell.
 homepage:            https://github.com/yanatan16/haskell-spsa
