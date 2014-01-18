@@ -8,38 +8,47 @@ module Math.Optimization.SPSA.Implementation (
   standardAk,
   standardCk,
   semiautomaticTuning,
-  bernoulli,
-  mkUnconstrainedSPSA
+  bernoulli
 ) where
 
+import Control.Monad.State (State, MonadState(get,put))
 import System.Random (mkStdGen,randoms)
 import Numeric.LinearAlgebra (Vector,scale,scaleRecip,randomVector,RandDist(Uniform))
 
-import Math.Optimization.SPSA.Types (LossFn,SPSA(..))
-
------------------
--- Types
------------------
-
-
-mkUnconstrainedSPSA :: Int -> LossFn -> [Double] -> [Double] -> Int -> SPSA
-mkUnconstrainedSPSA seed lss a c n = SPSA{loss=lss, constraint=id, ak=a, ck=c, delta=bernoulli seed n}
+import Math.Optimization.SPSA.Types
 
 -----------------
 -- Main Functions
 -----------------
 
-optimize :: SPSA -> Int -> Vector Double -> Vector Double
-optimize spsa rounds t0 = foldl opt t0 (take rounds $ zip3 (ak spsa) (ck spsa) (delta spsa))
-  where
-    constrainF = constraint spsa
-    lossF = loss spsa
-    opt t (a,c,d) = constrainF (t - (scale a g))
-      where
-        cd = scale c d
-        ya = lossF (t + cd)
-        yb = lossF (t - cd)
-        g = scaleRecip ((ya - yb) / 2) cd
+--optimize :: SPSA -> Int -> Vector Double -> Vector Double
+--optimize spsa rounds t0 = foldl opt t0 (take rounds $ zip3 (ak spsa) (ck spsa) (delta spsa))
+--  where
+--    constrainF = constraint spsa
+--    lossF = loss spsa
+--    opt t (a,c,d) = constrainF (t - (scale a g))
+--      where
+--        cd = scale c d
+--        ya = lossF (t + cd)
+--        yb = lossF (t - cd)
+--        g = scaleRecip ((ya - yb) / 2) cd
+
+optimizeSingle :: Vector Double -> State SPSA (Vector Double)
+optimizeSingle t = do
+  (a, c, d) <- peelAll
+  lossF <- getLoss
+  constrainF <- getConstraint
+  let cd = c `scale` d
+  let ya = lossF (t + cd)
+  let yb = lossF (t - cd)
+  let grad = ((ya - yb) / 2) `scaleRecip` cd
+  return $ constrainF $ t - (a `scale` grad)
+
+optimize :: Vector Double -> State SPSA (Vector Double)
+optimize t = do
+  t' <- optimizeSingle t
+  stop <- checkStop t t'
+  if stop then return t' else optimize t'
 
 
 -----------------
@@ -52,8 +61,13 @@ standardAk a aA alpha = map (\k -> a / (k + 1 + (fromIntegral aA)) ** alpha) [1.
 standardCk :: Double -> Double -> [Double]
 standardCk c gamma = standardAk c 0 gamma
 
-semiautomaticTuning :: Double -> Double -> ([Double],[Double])
-semiautomaticTuning a c = (standardAk a 0 0.602, standardCk c 0.101)
+-- | Semiautomatic tuning for the gain sequences
+-- | c should be about the standard deviation of a measurement
+-- | a is set how much you want the first iteration to move
+semiautomaticTuning :: Int -> Double -> Double -> ([Double],[Double])
+semiautomaticTuning iterations a c = (standardAk a (iterations `quot` 10) 0.602, standardCk c 0.101)
+
+--smarterTuning :: LossFn -> Int -> ()
 
 -----------------
 -- Distributions
