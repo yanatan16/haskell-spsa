@@ -12,10 +12,8 @@ module Math.Optimization.SPSA.Implementation (
   mkUnconstrainedSPSA
 ) where
 
-import System.Random (getStdGen,randomRs)
-import Data.Word (Word8)
-import Data.List (genericSplitAt)
-import Numeric.LinearAlgebra (Vector,scale,scaleRecip,fromList)
+import System.Random (mkStdGen,randoms)
+import Numeric.LinearAlgebra (Vector,scale,scaleRecip,randomVector,RandDist(Uniform))
 
 import Math.Optimization.SPSA.Types (LossFn,SPSA(..))
 
@@ -24,10 +22,8 @@ import Math.Optimization.SPSA.Types (LossFn,SPSA(..))
 -----------------
 
 
-mkUnconstrainedSPSA :: LossFn -> [Double] -> [Double] -> Int -> IO SPSA
-mkUnconstrainedSPSA lss a c n = do
-  pd <- bernoulli n
-  return SPSA{loss=lss, constraint=id, ak=a, ck=c, delta=pd}
+mkUnconstrainedSPSA :: Int -> LossFn -> [Double] -> [Double] -> Int -> SPSA
+mkUnconstrainedSPSA seed lss a c n = SPSA{loss=lss, constraint=id, ak=a, ck=c, delta=bernoulli seed n}
 
 -----------------
 -- Main Functions
@@ -44,7 +40,6 @@ optimize spsa rounds t0 = foldl opt t0 (take rounds $ zip3 (ak spsa) (ck spsa) (
         ya = lossF (t + cd)
         yb = lossF (t - cd)
         g = scaleRecip ((ya - yb) / 2) cd
-        _ = (a,c,d) :: (Double,Double,Vector Double)
 
 
 -----------------
@@ -64,16 +59,9 @@ semiautomaticTuning a c = (standardAk a 0 0.602, standardCk c 0.101)
 -- Distributions
 -----------------
 
-bernoulli :: Int -> IO [Vector Double]
-bernoulli n = do
-  stdgen <- getStdGen
-  rands <- return (randomRs (0,1) stdgen :: [Word8])
-  berns <- return $ map (\i -> 2 * ((fromIntegral i) - 0.5)) rands
-  return $ map fromList $ accumEvery n berns
-
------------------
--- Helpers
------------------
-
-accumEvery :: Integral i => i -> [a] -> [[a]]
-accumEvery n xs = map fst $ iterate (genericSplitAt n . snd) (genericSplitAt n xs)
+bernoulli :: Int -> Int -> [Vector Double]
+bernoulli seed n = map (toBernoulli . mkVec) seeds
+  where
+    toBernoulli vec = (vec - 0.5) / (abs $ vec - 0.5)
+    mkVec s = (randomVector s Uniform n)
+    seeds = (randoms $ mkStdGen seed :: [Int])

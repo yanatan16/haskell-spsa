@@ -4,14 +4,14 @@ import Test.Framework (defaultMainWithArgs, testGroup, Test)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
 
-import Test.QuickCheck (Property, NonNegative(..))
-import Test.QuickCheck.Monadic (assert, monadicIO, run)
+import Test.QuickCheck (NonNegative(..))
 import Test.HUnit (assertBool)
 
 import qualified Numeric.LinearAlgebra as LA
 import Math.Optimization.SPSA
 import Math.Optimization.LossFunctions (absSum, rosenbrock)
 import Test.Types
+import System.Random (randomIO)
 
 monotonicallyDecreasing :: [Double] -> Bool
 monotonicallyDecreasing xs = fst $ foldl ensureDecreasing (True, 0) xs
@@ -42,17 +42,11 @@ props_standardCkDecreasing :: NonNegativeDouble -> Exponent Double -> SmallIndex
 props_standardCkDecreasing (NonNegativeDouble c) (Exponent gamma) (SmallIndex n) =
   monotonicallyDecreasing (take n (standardCk c gamma))
 
-props_bernoulliLength :: SmallIndex -> Property
-props_bernoulliLength (SmallIndex n) =
-    monadicIO test
-  where
-    test = do pd <- run $ bernoulli n
-              assert $ all (\v -> LA.dim v == n) (take 10 pd)
+props_bernoulliLength :: Int -> SmallIndex -> Bool
+props_bernoulliLength seed (SmallIndex n) = all (\v -> LA.dim v == n) $ take 10 $ bernoulli seed n
 
-props_bernoulliElements :: SmallIndex -> Property
-props_bernoulliElements (SmallIndex n) = monadicIO test
-  where test = do pd <- run $ bernoulli n
-                  assert $ all (\v -> all (== 1) $ LA.toList $ abs v) (take 10 pd)
+props_bernoulliElements :: Int -> SmallIndex -> Bool
+props_bernoulliElements seed (SmallIndex n) = all (all (== 1) . LA.toList . abs) $ take 10 $ bernoulli seed n
 
 props_semiautomaticTuningAk :: NonNegativeDouble -> SmallIndex -> Bool
 props_semiautomaticTuningAk (NonNegativeDouble a) (SmallIndex n) = all (\(a1,a2) -> a1 == a2) (zip gain (take n tak))
@@ -71,16 +65,18 @@ props_lossFunctionPositive lss xs = ((>= 0.0) . lss . LA.fromList) xs
 
 case_absSumSPSA :: IO ()
 case_absSumSPSA = do
-  (gainA,gainC) <- return $ semiautomaticTuning 1 0.1
-  spsa <- mkUnconstrainedSPSA absSum gainA gainC 5
-  output <- return $ optimize spsa 1000 (LA.fromList [1, 1, 1, 1, 1])
+  seed <- randomIO
+  let (gainA,gainC) = semiautomaticTuning 1 0.1
+  let spsa = mkUnconstrainedSPSA seed absSum gainA gainC 5
+  let output = optimize spsa 1000 (LA.fromList [1, 1, 1, 1, 1])
   assertBool ("SPSA Absolute Sum failed (" ++ (show $ absSum output) ++ ")") (absSum output < 0.001)
 
 case_rosenbrockSPSA :: IO ()
 case_rosenbrockSPSA = do
-  (gainA,gainC) <- return $ semiautomaticTuning 0.0001 0.05
-  spsa <- mkUnconstrainedSPSA rosenbrock gainA gainC 10
-  output <- return $ optimize spsa 10000 (LA.fromList [0.90,1.1,0.90,1.1,0.90,1.1,0.90,1.1,0.90,1.1])
+  seed <- randomIO
+  let (gainA,gainC) = semiautomaticTuning 0.0001 0.05
+  let spsa = mkUnconstrainedSPSA seed rosenbrock gainA gainC 10
+  let output = optimize spsa 10000 (LA.fromList [0.90,1.1,0.90,1.1,0.90,1.1,0.90,1.1,0.90,1.1])
   assertBool ("SPSA Rosenbrock failed (" ++ (show $ rosenbrock output) ++ ")") (rosenbrock output < 0.01)
 
 tests :: [Test]

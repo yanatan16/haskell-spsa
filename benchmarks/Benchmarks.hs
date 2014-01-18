@@ -7,22 +7,26 @@ import qualified Numeric.LinearAlgebra as LA
 import Math.Optimization.SPSA (mkUnconstrainedSPSA, semiautomaticTuning, optimize)
 import Math.Optimization.LossFunctions
 
+import System.Random (randomIO)
+
 ---------------------
 -- Benchmarks
 ---------------------
 
 bench_rosenbrock :: Int -> IO ()
 bench_rosenbrock n = do
-  (ak,ck) <- return $ semiautomaticTuning 0.0001 0.05
-  spsa <- mkUnconstrainedSPSA rosenbrock ak ck 10
-  output <- return $ optimize spsa n (LA.fromList [0.90,1.1,0.90,1.1,0.90,1.1,0.90,1.1,0.90,1.1])
+  seed <- randomIO
+  let (ak,ck) = semiautomaticTuning 0.0001 0.05
+  let spsa = mkUnconstrainedSPSA seed rosenbrock ak ck 10
+  let output = optimize spsa n (LA.fromList [0.90,1.1,0.90,1.1,0.90,1.1,0.90,1.1,0.90,1.1])
   if rosenbrock output > 1 then error "Failed Rosenbrock!" else return ()
 
 bench_absSum :: Int -> Int -> IO ()
 bench_absSum d n = do
-  (ak,ck) <- return $ semiautomaticTuning 1 0.1
-  spsa <- mkUnconstrainedSPSA absSum ak ck d
-  output <- return $ optimize spsa n (LA.constant 1 d)
+  seed <- randomIO
+  let (ak,ck) = semiautomaticTuning 1 0.1
+  let spsa = mkUnconstrainedSPSA seed absSum ak ck d
+  let output = optimize spsa n (LA.constant 1 d)
   if absSum output > 1 then error "Failed Absolute Sum!" else return ()
 
 ---------------------
