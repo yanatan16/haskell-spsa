@@ -1,13 +1,13 @@
 module Test.Test where
 
-import Test.Framework (defaultMainWithArgs, testGroup, Test)
+import Test.Framework (defaultMainWithArgs, testGroup)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
 
 import Test.QuickCheck (NonNegative(..), (==>))
 import Test.HUnit (assertBool, assertFailure)
 
-import Control.Exception (handle, try, ErrorCall(..))
+import Control.Exception (try, ErrorCall(..))
 
 import qualified Numeric.LinearAlgebra as LA
 import Math.Optimization.SPSA
