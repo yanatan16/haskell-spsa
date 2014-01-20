@@ -5,7 +5,9 @@ import Test.Framework.Providers.HUnit (testCase)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
 
 import Test.QuickCheck (NonNegative(..), (==>))
-import Test.HUnit (assertBool)
+import Test.HUnit (assertBool, assertFailure)
+
+import Control.Exception (handle, try, ErrorCall(..))
 
 import qualified Numeric.LinearAlgebra as LA
 import Math.Optimization.SPSA
@@ -16,6 +18,14 @@ import System.Random (randomIO)
 monotonicallyNonincreasing :: Ord a => [a] -> Bool
 monotonicallyNonincreasing (x:y:xs) = x >= y && monotonicallyNonincreasing (y:xs)
 monotonicallyNonincreasing _ = True
+
+assertErrorCall msg action = do
+  r <- try action
+  case r of
+    Left (ErrorCall _) -> return ()
+    --Left e -> assertFailure $ msg ++ "\nReceived an unexpected exception: " ++ (show e)
+    Right _ -> assertFailure $ msg ++ "\nReceived no exception, but was expecting an error"
+
 
 -----------------
 -- Properties
@@ -65,6 +75,9 @@ case_rosenbrockSPSA = do
   let output = runSPSA (mkRosenbrockSPSA seed) (LA.fromList [0.90,1.1,0.90,1.1,0.90,1.1,0.90,1.1,0.90,1.1])
   assertBool ("SPSA Rosenbrock failed (" ++ (show $ rosenbrock output) ++ ")") (rosenbrock output < 0.01)
 
+case_unconfiguredSPSA = do
+  assertErrorCall "SPSA should error if used without configuration" (print $ runSPSA (return ()) (LA.fromList [1]))
+
 tests = [
   testGroup "standardGainAk" [
     testProperty "nth term of standardGainAk" props_standardGainAkValues
@@ -82,6 +95,9 @@ tests = [
     testProperty "absSum" (props_lossFunctionPositive absSum)
     ,testProperty "rosenbrock" (props_lossFunctionPositive rosenbrock)
     ]
+  ,testGroup "Configuring SPSA" [
+    testCase "error on running uninitialized SPSA" case_unconfiguredSPSA
+  ]
   ,testGroup "SPSA" [
     testCase "absSum SPSA" case_absSumSPSA
     ,testCase "rosenbrock SPSA" case_rosenbrockSPSA

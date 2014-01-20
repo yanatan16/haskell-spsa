@@ -1,5 +1,5 @@
 module Math.Optimization.SPSA.Types (
-  defaultSPSA,
+  defaultSPSA, checkSPSA,
   StateSPSA,
   getLoss, getConstraint, getStop, peelAll, getIterations,
   setLoss, setConstraint, pushStopCrit, setGainA, setGainC, setPerturbation,
@@ -38,18 +38,29 @@ defaultSPSA = SPSA {
   iterations = 0,
   lossFn = \_ -> error "No loss function implemented",
   constraintFn = id,
-  gainA = [error "No A gain sequence specified"],
-  gainC = [error "No C gain sequence specified"],
-  perturbation = [error "No perturbation sequence specified"],
+  gainA = [],
+  gainC = [],
+  perturbation = [],
   stoppingCrits = []
 }
+
+-- | Check to make sure all required fields are filled
+checkSPSA :: Vector Double -> StateSPSA ()
+checkSPSA t = do
+  spsa <- get
+  return $ lossFn spsa t
+  if gainA spsa == [] then error "gain sequence a_k must be specified" else return ()
+  if gainC spsa == [] then error "gain sequence c_k must be specified" else return ()
+  if perturbation spsa == [] then error "perturbation vector sequence must be specified" else return ()
+  if stoppingCrits spsa == [] then error "a stopping criteria must be specified" else return ()
+
 
 -----------------------
 -- Stopping Criteria --
 -----------------------
 
 -- | A stopping criteria is a function of current iteration number, last iteration theta, and current theta
-data StoppingCriteria = Iterations Int | NormDiff Double
+data StoppingCriteria = Iterations Int | NormDiff Double deriving (Eq)
 
 -- | Check to see if we should stop based on the critieria, iteration count, last and current iteration
 shouldStop :: StoppingCriteria -> Int -> Vector Double -> Vector Double -> Bool
