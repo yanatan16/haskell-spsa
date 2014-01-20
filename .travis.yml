@@ -1,7 +1,6 @@
 language: haskell
 ghc:
   - 7.6
-  - 7.4
 before_script:
   - sudo apt-get update -qq
-  - sudo apt-get install lapack gsl
+  - sudo apt-get install -qq libgsl0-dev liblapack-dev
