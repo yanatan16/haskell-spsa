@@ -52,7 +52,8 @@ library
   exposed-modules:  Math.Optimization.SPSA,
                     Math.Optimization.LossFunctions
   other-modules:    Math.Optimization.SPSA.Types,
-                    Math.Optimization.SPSA.Implementation
+                    Math.Optimization.SPSA.Optimize,
+                    Math.Optimization.SPSA.Construction
   hs-source-dirs:   src
 
   build-depends:    base >=4 && < 5,

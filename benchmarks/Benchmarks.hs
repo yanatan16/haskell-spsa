@@ -4,8 +4,14 @@ import Criterion.Main (defaultMain, bench, bgroup, Benchmark)
 
 import qualified Numeric.LinearAlgebra as LA
 
-import Math.Optimization.SPSA (mkUnconstrainedSPSA, semiautomaticTuning, optimize)
-import Math.Optimization.LossFunctions
+import Math.Optimization.SPSA (
+  StateSPSA, runSPSA,
+  setLoss,
+  semiautomaticTuning,
+  setPerturbation, bernoulli,
+  pushStopCrit, StoppingCriteria(..)
+  )
+import Math.Optimization.LossFunctions (absSum, rosenbrock)
 
 import System.Random (randomIO)
 
@@ -13,20 +19,31 @@ import System.Random (randomIO)
 -- Benchmarks
 ---------------------
 
-bench_rosenbrock :: Int -> IO ()
+mkRosenbrockSPSA seed n d = do
+  setLoss rosenbrock
+  semiautomaticTuning n 0.0001 0.05
+  setPerturbation (bernoulli seed d)
+  pushStopCrit (Iterations n)
+  --pushStopCrit (NormDiff 0.001)
+
 bench_rosenbrock n = do
   seed <- randomIO
-  let (ak,ck) = semiautomaticTuning n 0.0001 0.05
-  let spsa = mkUnconstrainedSPSA seed rosenbrock ak ck 10
-  let output = optimize spsa n (LA.fromList [0.90,1.1,0.90,1.1,0.90,1.1,0.90,1.1,0.90,1.1])
-  if rosenbrock output > 1 then error "Failed Rosenbrock!" else return ()
+  let spsa = mkRosenbrockSPSA seed n 10
+  let theta0 = LA.fromList [0.90,1.1,0.90,1.1,0.90,1.1,0.90,1.1,0.90,1.1]
+  let output = runSPSA spsa theta0
+  if rosenbrock output > 1 then error ("Failed Rosenbrock! " ++ (show $ rosenbrock output) ++ ": " ++ (show output)) else return ()
 
-bench_absSum :: Int -> Int -> IO ()
+mkAbsSumSPSA seed n d = do
+  setLoss absSum
+  semiautomaticTuning n 1 0.1
+  setPerturbation (bernoulli seed d)
+  pushStopCrit (Iterations n)
+
 bench_absSum d n = do
   seed <- randomIO
-  let (ak,ck) = semiautomaticTuning n 1 0.1
-  let spsa = mkUnconstrainedSPSA seed absSum ak ck d
-  let output = optimize spsa n (LA.constant 1 d)
+  let spsa = mkAbsSumSPSA seed n d
+  let theta0 = (LA.constant 1 d)
+  let output = runSPSA spsa theta0
   if absSum output > 1 then error "Failed Absolute Sum!" else return ()
 
 ---------------------
@@ -38,14 +55,9 @@ benches = [
   bgroup "Rosenbrock" [
     bench "n=10000" (bench_rosenbrock 10000)
     ]
-  --,bgroup "AbsoluteSum" [
-  --  bench "n=100 100 iterations" (bench_absSum 100 100)
-  --  ,bench "n=100 1000 iterations" (bench_absSum 100 1000)
-  --  ,bench "n=100 10000 iterations" (bench_absSum 100 10000)
-  --  ,bench "n=200 100 iterations" (bench_absSum 200 100)
-  --  ,bench "n=200 1000 iterations" (bench_absSum 200 1000)
-  --  ,bench "n=200 10000 iterations" (bench_absSum 200 10000)
-  --  ]
+  ,bgroup "AbsoluteSum" [
+    bench "n=5 1000 iterations" (bench_absSum 5 1000)
+    ]
   ]
 
 

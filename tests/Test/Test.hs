@@ -4,7 +4,7 @@ import Test.Framework (defaultMainWithArgs, testGroup, Test)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
 
-import Test.QuickCheck (NonNegative(..), Positive(..))
+import Test.QuickCheck (NonNegative(..), (==>))
 import Test.HUnit (assertBool)
 
 import qualified Numeric.LinearAlgebra as LA
@@ -13,85 +13,66 @@ import Math.Optimization.LossFunctions (absSum, rosenbrock)
 import Test.Types
 import System.Random (randomIO)
 
-monotonicallyDecreasing :: [Double] -> Bool
-monotonicallyDecreasing xs = fst $ foldl ensureDecreasing (True, 0) xs
-  where
-    ensureDecreasing (False,_) _ = (False,0)
-    ensureDecreasing (True,0) x = (True,x)
-    ensureDecreasing (True,x) y = (x >= y, y)
+monotonicallyNonincreasing :: Ord a => [a] -> Bool
+monotonicallyNonincreasing (x:y:xs) = x >= y && monotonicallyNonincreasing (y:xs)
+monotonicallyNonincreasing _ = True
 
 -----------------
 -- Properties
 -----------------
 
-props_standardAkValues :: NonNegativeDouble -> NonNegative Int -> Exponent Double -> SmallIndex -> Bool
-props_standardAkValues (NonNegativeDouble a) (NonNegative aA) (Exponent alpha) (SmallIndex n) =
+props_standardGainAkValues (NonNegativeDouble a) (NonNegative aA) (Exponent alpha) (SmallIndex n) =
   gain !! n == (a / ((fromIntegral n) + 2 + (fromIntegral aA)) ** alpha)
-  where gain = standardAk a aA alpha
+  where gain = standardGainAk a aA alpha
 
-props_standardAkDecreasing :: NonNegative Double -> NonNegative Int -> Exponent Double -> SmallIndex -> Bool
-props_standardAkDecreasing (NonNegative a) (NonNegative aA) (Exponent alpha) (SmallIndex n) =
-  monotonicallyDecreasing (take n (standardAk a aA alpha))
+props_standardGainAkNonincreasing (NonNegative a) (NonNegative aA) (Exponent alpha) (SmallIndex n) =
+  monotonicallyNonincreasing (take n (standardGainAk a aA alpha))
 
-props_standardCkValues :: NonNegativeDouble -> Exponent Double -> SmallIndex -> Bool
-props_standardCkValues (NonNegativeDouble c) (Exponent gamma) (SmallIndex n) =
+props_standardGainCkValues (NonNegativeDouble c) (Exponent gamma) (SmallIndex n) =
   gain !! n == (c / ((fromIntegral n) + 2) ** gamma)
-  where gain = standardCk c gamma
+  where gain = standardGainCk c gamma
 
-props_standardCkDecreasing :: NonNegativeDouble -> Exponent Double -> SmallIndex -> Bool
-props_standardCkDecreasing (NonNegativeDouble c) (Exponent gamma) (SmallIndex n) =
-  monotonicallyDecreasing (take n (standardCk c gamma))
+props_standardGainCkNonincreasing (NonNegativeDouble c) (Exponent gamma) (SmallIndex n) =
+  monotonicallyNonincreasing (take n (standardGainCk c gamma))
 
-props_bernoulliLength :: Int -> SmallIndex -> Bool
-props_bernoulliLength seed (SmallIndex n) = all (\v -> LA.dim v == n) $ take 10 $ bernoulli seed n
+props_bernoulliLength seed (SmallIndex n) = n >= 0 ==> all (\v -> LA.dim v == n) $ take 10 $ bernoulli seed n
 
-props_bernoulliElements :: Int -> SmallIndex -> Bool
 props_bernoulliElements seed (SmallIndex n) = all (all (== 1) . LA.toList . abs) $ take 10 $ bernoulli seed n
 
-props_semiautomaticTuningAk :: Positive Int -> NonNegativeDouble -> SmallIndex -> Bool
-props_semiautomaticTuningAk (Positive iter) (NonNegativeDouble a) (SmallIndex n) = all (\(a1,a2) -> a1 == a2) (zip gain (take n tak))
-  where (tak,_) = semiautomaticTuning iter a 1
-        gain = standardAk a (iter `quot` 10) 0.602
-
-props_semiautomaticTuningCk :: NonNegativeDouble -> SmallIndex -> Bool
-props_semiautomaticTuningCk (NonNegativeDouble c) (SmallIndex n) = all (\(a1,a2) -> a1 == a2) (zip gain (take n tck))
-  where (_,tck) = semiautomaticTuning 1 1 c
-        gain = standardCk c 0.101
-
-props_lossFunctionPositive :: LossFn -> [Double] -> Bool
+props_lossFunctionPositive lss xs@(_:_:_) = ((>= 0.0) . lss . LA.fromList) xs
 props_lossFunctionPositive _ [] = True
 props_lossFunctionPositive _ [_] = True
-props_lossFunctionPositive lss xs = ((>= 0.0) . lss . LA.fromList) xs
 
-case_absSumSPSA :: IO ()
+mkAbsSumSPSA seed = do
+  setLoss absSum
+  semiautomaticTuning 1000 1 0.1
+  setPerturbation (bernoulli seed 5)
+  pushStopCrit (Iterations 1000)
+
 case_absSumSPSA = do
   seed <- randomIO
-  let (gainA,gainC) = semiautomaticTuning 1000 1 0.1
-  let spsa = mkUnconstrainedSPSA seed absSum gainA gainC 5
-  let output = optimize spsa 1000 (LA.fromList [1, 1, 1, 1, 1])
+  let output = runSPSA (mkAbsSumSPSA seed) (LA.fromList [1, 1, 1, 1, 1])
   assertBool ("SPSA Absolute Sum failed (" ++ (show $ absSum output) ++ ")") (absSum output < 0.001)
 
-case_rosenbrockSPSA :: IO ()
+mkRosenbrockSPSA seed = do
+  setLoss rosenbrock
+  semiautomaticTuning 10000 0.001 0.05
+  setPerturbation (bernoulli seed 10)
+  pushStopCrit (Iterations 10000)
+
 case_rosenbrockSPSA = do
   seed <- randomIO
-  let (gainA,gainC) = semiautomaticTuning 10000 0.0001 0.05
-  let spsa = mkUnconstrainedSPSA seed rosenbrock gainA gainC 10
-  let output = optimize spsa 10000 (LA.fromList [0.90,1.1,0.90,1.1,0.90,1.1,0.90,1.1,0.90,1.1])
+  let output = runSPSA (mkRosenbrockSPSA seed) (LA.fromList [0.90,1.1,0.90,1.1,0.90,1.1,0.90,1.1,0.90,1.1])
   assertBool ("SPSA Rosenbrock failed (" ++ (show $ rosenbrock output) ++ ")") (rosenbrock output < 0.01)
 
-tests :: [Test]
 tests = [
-  testGroup "standardAk" [
-    testProperty "nth term of standardAk" props_standardAkValues
-    ,testProperty "monotonially decreasing standardAk" props_standardAkDecreasing
+  testGroup "standardGainAk" [
+    testProperty "nth term of standardGainAk" props_standardGainAkValues
+    ,testProperty "monotonially Nonincreasing standardGainAk" props_standardGainAkNonincreasing
     ]
-  ,testGroup "standardCk" [
-    testProperty "nth term of standardCk" props_standardCkValues
-    ,testProperty "monotonially decreasing standardCk" props_standardCkDecreasing
-    ]
-  ,testGroup "semiautomaticTuning" [
-    testProperty "ak matches" props_semiautomaticTuningAk
-    ,testProperty "ck matches" props_semiautomaticTuningCk
+  ,testGroup "standardGainCk" [
+    testProperty "nth term of standardGainCk" props_standardGainCkValues
+    ,testProperty "monotonially Nonincreasing standardGainCk" props_standardGainCkNonincreasing
     ]
   ,testGroup "bernoulliPerturbationDistribution" [
     testProperty "length of perturbation distribution" props_bernoulliLength
