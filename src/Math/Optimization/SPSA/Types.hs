@@ -9,7 +9,7 @@ module Math.Optimization.SPSA.Types (
 ) where
 
 import Numeric.LinearAlgebra (Vector, norm2)
-import Control.Monad.State (State, get, put)
+import Control.Monad.State (State, get, put, gets, modify)
 
 ----------------
 -- SPSA Types --
@@ -74,41 +74,33 @@ shouldStop (NormDiff diff) _ lst cur = norm2 (cur - lst) < diff
 -- The primary monadic type to be passed around
 type StateSPSA = State SPSA
 
--- | Get an arbitrary field out of SPSA
-getSPSA :: (SPSA -> a) -> StateSPSA a
-getSPSA extractor = get >>= return . extractor
-
--- | Set an arbitrary field of SPSA
-setSPSA :: (a -> SPSA -> SPSA) -> a -> StateSPSA ()
-setSPSA updater val = get >>= put . updater val
-
 -- | Get the loss function out of StateSPSA
 getLoss :: StateSPSA LossFn
-getLoss = getSPSA lossFn
+getLoss = gets lossFn
 
 -- | Set the loss function
 setLoss :: LossFn -> StateSPSA ()
-setLoss = setSPSA $ \loss spsa -> spsa { lossFn = loss }
+setLoss loss = modify $ \spsa -> spsa { lossFn = loss }
 
 -- | Get the constraint function out of StateSPSA
 getConstraint :: StateSPSA ConstraintFn
-getConstraint = getSPSA constraintFn
+getConstraint = gets constraintFn
 
 -- | Set the constraint function
 setConstraint :: ConstraintFn -> StateSPSA ()
-setConstraint = setSPSA $ \constraint spsa -> spsa { constraintFn = constraint }
+setConstraint constraint = modify $ \spsa -> spsa { constraintFn = constraint }
 
 -- | Get the stopping functions out of StateSPSA
 getStop :: StateSPSA [StoppingCriteria]
-getStop = getSPSA stoppingCrits
+getStop = gets stoppingCrits
 
 -- | Push a stopping criteria onto SPSA
 pushStopCrit :: StoppingCriteria -> StateSPSA ()
-pushStopCrit = setSPSA $ \sc spsa -> let crits = sc : stoppingCrits spsa in spsa { stoppingCrits = crits }
+pushStopCrit sc = modify $ \spsa -> let crits = sc : stoppingCrits spsa in spsa { stoppingCrits = crits }
 
 -- | Get the iteration count
 getIterations :: StateSPSA Int
-getIterations = getSPSA iterations
+getIterations = gets iterations
 
 -- | Increment the iteration count
 incrementIteration :: StateSPSA Int
@@ -149,12 +141,12 @@ peelAll = do
 
 -- | Set the gainA sequence
 setGainA :: [Double] -> StateSPSA ()
-setGainA = setSPSA $ \as spsa -> spsa { gainA = as }
+setGainA as = modify $ \spsa -> spsa { gainA = as }
 
 -- | Set the gainC sequence
 setGainC :: [Double] -> StateSPSA ()
-setGainC = setSPSA $ \cs spsa -> spsa { gainC = cs }
+setGainC cs = modify $ \spsa -> spsa { gainC = cs }
 
 -- | Set the perturbation sequence
 setPerturbation :: [Vector Double] -> StateSPSA ()
-setPerturbation = setSPSA $ \ds spsa -> spsa { perturbation = ds }
+setPerturbation ds = modify $ \spsa -> spsa { perturbation = ds }

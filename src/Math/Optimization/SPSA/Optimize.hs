@@ -2,7 +2,7 @@ module Math.Optimization.SPSA.Optimize (
   runSPSA
 ) where
 
-import Control.Monad.State (runState)
+import Control.Monad.State (evalState)
 import Numeric.LinearAlgebra (Vector,scale,scaleRecip)
 
 import Math.Optimization.SPSA.Types (
@@ -19,7 +19,7 @@ import Math.Optimization.SPSA.Types (
 
 -- | Exported runSPSA function to extract the SPSA type
 runSPSA :: StateSPSA a -> Vector Double -> Vector Double
-runSPSA st t0 = fst $ runState (st >> checkSPSA t0 >> runSPSA' t0) defaultSPSA
+runSPSA st t0 = evalState (st >> checkSPSA t0 >> runSPSA' t0) defaultSPSA
 
 -- | Run the SPSA optimization algorithm
 runSPSA' :: Vector Double -> StateSPSA (Vector Double)
