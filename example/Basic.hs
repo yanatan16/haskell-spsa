@@ -2,7 +2,8 @@ module Main where
 
 import System.Random (randomIO)
 import System.Environment (getArgs)
-import Numeric.LinearAlgebra (Vector, fromList, Container(sumElements, mul), randomVector, RandDist(Uniform))
+import Numeric.LinearAlgebra (Vector, fromList, randomVector, RandDist(Uniform))
+import Numeric.Container (Container (mul), sumElements)
 import Math.Optimization.SPSA (
   StateSPSA, runSPSA,
   setLoss,
